@@ -1,0 +1,20 @@
+Title: Live Content
+
+Description: Fetched live
+
+Source: https://docs.google.com/document/d/1cjXFYf2Thm8cBEN-0C48B-v02cj3jGLd47lcO18prHE/edit?usp=sharing
+
+---
+DevOps Homework - Google Docs
+JavaScript isn't enabled in your browser, so this file can't be opened. Enable and reload.
+This browser version is no longer supported. Please upgrade to a supported browser.
+DevOps Homework
+Share
+Sign in
+File
+Edit
+View
+Tools
+Help
+Accessibility
+Debug
