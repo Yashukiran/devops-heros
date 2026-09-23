@@ -13,7 +13,7 @@ What I actually came away with was a feel for the basic Docker loop, which turns
 ## Repository layout
 
 ```text
-session6-docker_fundamentals/
+Docker Fundementals/
 │
 ├── screenshot/
 │   ├── node.png

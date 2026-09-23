@@ -1,5 +1,0 @@
-  group:
-   - dev1
-  env:
-  'name': 'POSTGRES_USER1'
-  'value': $(POSTGRES_USER1)
