@@ -4,6 +4,7 @@ A complete CI/CD demo project built on the course's [`10-final-cicd-pipeline`](.
 
 - **Workflow file:** [`.github/workflows/session16-cicd.yml`](../../.github/workflows/session16-cicd.yml)
 - **Successful run:** [Actions run #1](https://github.com/Yashukiran/devops-heros/actions/runs/37511470127). All 5 jobs green, total 2m 3s.
+- **Failed run (demo):** [Actions run #3](https://github.com/Yashukiran/devops-heros/actions/runs/37515783279). Tests fail, so build/docker/deploy are skipped.
 - **Published image:** `ghcr.io/yashukiran/session16-calculator`
 
 ---
@@ -88,81 +89,40 @@ GET /api/divide?a=1&b=0     -> 400 {"error": "Cannot divide by zero"}
 
 ---
 
-## 1. Run it locally first
+## Pipeline Screenshots
 
-![Local tests](screenshots/01-local-tests.png)
+### 1. Successful runs (green ✓)
 
-The project structure, then `pytest -v`: **9 passed** (5 calculator unit tests + 4 API tests).
+![Successful pipeline runs](screenshots/02-actions-successful-runs.png)
 
-![Local docker build and run](screenshots/02-local-docker-build-run.png)
+The Actions tab shows **run #1** (`e3a34c1`, the first push of the pipeline, 2m 3s) and **run #2** (`997792b`, the README push, 2m 9s). Both ran all 5 jobs successfully: **Test → Security Check → Build → Docker Build & Push → Deploy to Kubernetes**. Along the way the pipeline:
+- ran 9 pytest tests on the GitHub runner
+- uploaded the `test-results`, `calculator-build` and `docker-image` artifacts
+- built the Docker image, smoke-tested it, and pushed it to `ghcr.io/yashukiran/session16-calculator` (tagged with the commit SHA) using `GITHUB_TOKEN`
+- deployed it to a kind Kubernetes cluster (2/2 pods Running) and checked `/health` returned the exact commit SHA.
 
-`docker build` → image `session16-calculator:local` (43 MB content). `docker run -p 8080:8080`, then `curl`:
-- `/health` → `{"status": "ok", "version": "local"}`
-- `/api/add?a=10&b=5` → `result 15.0`
-- `/api/divide?a=1&b=0` → `{"error": "Cannot divide by zero"}` (HTTP 400)
-- `docker ps` shows the container `(health: starting)` from the Dockerfile's `HEALTHCHECK`, and `docker logs` shows each request.
+### 2. Failed run (red ✗): the CI gate stops broken code
 
-## 2. Commit and push, which triggers the pipeline
+To show the pipeline protecting the main branch, I deliberately broke the calculator:
 
-![git commit and push](screenshots/03-git-commit-push.png)
-
-`git add` the workflow plus the project, `git commit`, `git push origin Assignment`. The push matches the workflow's `on: push` + `paths:` filter, so GitHub starts the pipeline.
-
-## 3. Pipeline execution: all jobs successful
-
-![Pipeline run success](screenshots/04-pipeline-run-success.png)
-
-Run **#1**, triggered by the push of `e3a34c1`: **Status: Success, total duration 2m 3s, 3 artifacts**. The graph shows the dependency chain: `Test (10s)` and `Security Check (6s)` run in parallel, then `Build (7s)` and `Docker Build & Push (28s)`, then `Deploy to Kubernetes (1m 11s)`.
-
-### Test job
-
-![Test job – pytest](screenshots/05-job-test-pytest.png)
-
-On the GitHub runner: all 9 tests `PASSED`, *9 passed in 0.60s*. JUnit XML was generated and uploaded as the `test-results` artifact.
-
-### Build job
-
-![Build job](screenshots/06-job-build-artifact.png)
-
-`build.sh` produced `build/build-info.txt` with the **commit SHA and run number** filled in from GitHub's environment variables (`GITHUB_SHA`, `GITHUB_RUN_NUMBER`). The folder is uploaded as the `calculator-build` artifact.
-
-### Docker job: build, smoke test, push to GHCR
-
-![Docker push to GHCR](screenshots/07-job-docker-push-ghcr.png)
-
-The image is tagged with the short commit SHA (`e3a34c1`) and `latest`. It's started and **smoke-tested** with `curl` inside the runner, saved as an artifact, then **pushed to `ghcr.io/yashukiran/session16-calculator`** using the automatic `GITHUB_TOKEN`. No personal password is stored anywhere.
-
-### Deploy job (CD)
-
-![Deploy manifests](screenshots/08-job-deploy-kubernetes.png)
-
-A throwaway Kubernetes cluster is created with **kind** inside the runner, and the image from the `docker` job is loaded into it. Then `k8s/deployment.yaml` is applied with the image placeholder replaced by `ghcr.io/yashukiran/session16-calculator:e3a34c1`. `kubectl rollout status` → *successfully rolled out*, **2/2 pods Running**.
-
-![Deploy verify](screenshots/09-job-deploy-verify.png)
-
-Verification through the Service: `/health` returns `"version": "e3a34c1"`, which proves the **exact commit** is what's running. `/api/subtract?a=100&b=58` → `42.0`.
-
-### Security check
-
-![Security check](screenshots/10-job-security-check.png)
-
-Fails the pipeline if `.env`, `*.pem` or `*.key` files are committed (*No common sensitive files found*). It also shows how a secret is passed to a step through `env:`. GitHub automatically **masks** secret values as `***` in logs. (This is a basic classroom check. Session 17 adds real SAST/SCA/secret scanning tools.)
-
----
-
-## Failure behaviour (why `needs:` matters)
-
-If a test fails, for example `def add(a, b): return a + b + 1`:
-
-```text
-✗ Test Application          → pytest fails, job exits 1
-⊘ Build Application         → skipped (needs: test)
-⊘ Docker Build & Push       → skipped (needs: test)
-⊘ Deploy to Kubernetes      → skipped
-✓ Security Check            → still runs (it doesn't depend on test)
+```python
+def add(a, b):
+    return a + b + 1      # was: return a + b
 ```
 
-Broken code never becomes an image and never reaches the cluster. That's the whole point of a CI gate. Fix the code, push again, and the full pipeline goes green.
+![Failed pipeline run](screenshots/01-pipeline-failed-run.png)
+
+Run **#3** (`1efa3bd`, *"Break add(): return a + b + 1"*): **Status: Failure**, in only 14s.
+
+| Job | Result | Why |
+|---|---|---|
+| Test Application | ✗ failed | `test_add`: `assert 16 == 15`, and `test_api_add` fails the same way |
+| Security Check | ✓ passed | It doesn't depend on `test`, so it still runs |
+| Build Application | ⊘ skipped | `needs: test` |
+| Docker Build & Push | ⊘ skipped | `needs: [test, security-check]` |
+| Deploy to Kubernetes | ⊘ skipped | `needs: [docker, build]` |
+
+Broken code **never became an image and never reached the cluster**. That's the whole point of a CI gate. Changing `add()` back to `return a + b` and pushing again makes the pipeline green.
 
 ---
 
