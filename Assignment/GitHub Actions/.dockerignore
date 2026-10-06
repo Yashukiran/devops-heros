@@ -1,0 +1,6 @@
+tests/
+k8s/
+screenshots/
+build/
+__pycache__/
+*.md
