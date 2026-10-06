@@ -1,0 +1,9 @@
+tests/
+k8s/
+security/
+screenshots/
+reports/
+.pytest_cache/
+.coverage
+__pycache__/
+*.md
