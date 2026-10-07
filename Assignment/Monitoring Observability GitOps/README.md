@@ -92,6 +92,11 @@ With the load generator stopped, the last log lines show the app's own **health 
 
 ![logs and top](screenshots/04b-logs-top-nodes-pods.png)
 
+### 4c. The `up` query: every scrape target is healthy
+The classic first PromQL query, `up`, run against Prometheus's HTTP API. It returns **15 targets, all `1`**: the API server, CoreDNS, kubelet/cAdvisor, node-exporter, kube-state-metrics, the monitoring components themselves, and both **podinfo** pods (found through my ServiceMonitor). The `/targets` API confirms `up: 15`, none down.
+
+![up targets](screenshots/04c-prometheus-up-all-targets.png)
+
 ### 5. Alerts
 My 5 rules are `PodinfoDown`, `PodinfoReplicasUnavailable`, `PodinfoHighErrorRate`, `PodinfoHighCPU` and `PodinfoHighMemory`.
 - **`PodinfoHighErrorRate`** is **firing**: 5xx rate is 10.05%, above the 5% threshold.
@@ -157,6 +162,17 @@ Once the push went through (commit `3e23ae5`):
 The change travelled **Git → Argo CD → Kubernetes**, with no `kubectl` involved.
 
 ![scaled via git](screenshots/10-gitops-scaled-to-3-via-git.png)
+
+### 10b. Application details and resource tree
+The same information as the Argo CD UI's app card and tree view, read from the `Application` object:
+- **Source:** `Yashukiran/devops-heros`, branch `Assignment`, path `…/gitops/app`.
+- **Destination:** namespace `session20`, with `selfHeal: true`.
+- **State:** `Synced` / `Healthy`, at the latest commit.
+- **Managed resources:** Namespace, Service and Deployment, all `Synced`.
+- **Last sync operation:** `Succeeded`.
+- **In the cluster:** the Deployment → ReplicaSet → 3 Pods chain, plus the Service.
+
+![argocd tree](screenshots/10b-argocd-app-resource-tree.png)
 
 ### 11. Self-healing (drift correction)
 Done while Git still said `replicas: 2`:
