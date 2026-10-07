@@ -1,0 +1,73 @@
+# Demo application: podinfo exposes Prometheus metrics (/metrics),
+# health endpoints (/healthz, /readyz) and structured JSON logs (debug = one line per request).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring-demo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: podinfo
+  namespace: monitoring-demo
+  labels:
+    app: podinfo
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: podinfo
+  template:
+    metadata:
+      labels:
+        app: podinfo
+    spec:
+      containers:
+        - name: podinfo
+          image: ghcr.io/stefanprodan/podinfo:6.9.2
+          command: ["./podinfo", "--port=9898", "--level=debug"]
+          ports:
+            - name: http
+              containerPort: 9898
+          # application health -> Kubernetes restarts / removes from Service on failure
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 50m, memory: 32Mi }
+            limits: { cpu: 500m, memory: 128Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: podinfo
+  namespace: monitoring-demo
+  labels:
+    app: podinfo
+spec:
+  selector:
+    app: podinfo
+  ports:
+    - name: http
+      port: 9898
+      targetPort: http
+---
+# tells Prometheus (operator) to scrape every podinfo pod behind the Service
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: podinfo
+  namespace: monitoring-demo
+spec:
+  selector:
+    matchLabels:
+      app: podinfo
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

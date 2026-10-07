@@ -1,0 +1,33 @@
+# Sends traffic to podinfo: 90% 200s + 10% /status/500 -> drives CPU up and triggers the error-rate alert
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: load-generator
+  namespace: monitoring-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: load-generator
+  template:
+    metadata:
+      labels:
+        app: load-generator
+    spec:
+      containers:
+        - name: curl
+          image: curlimages/curl:8.16.0
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              # 4 workers, each sending batches of 1000 parallel keep-alive requests (900 OK + 100 errors)
+              for w in 1 2 3 4; do
+                ( while true; do
+                    curl -s -Z --parallel-max 20 \
+                      "http://podinfo:9898/?r=[1-900]" \
+                      "http://podinfo:9898/status/500?r=[1-100]" > /dev/null
+                  done ) &
+              done
+              wait
+          resources:
+            limits: { cpu: "1", memory: 128Mi }

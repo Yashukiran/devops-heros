@@ -1,0 +1,52 @@
+# Alerting rules evaluated by Prometheus; firing alerts are sent to Alertmanager
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: podinfo-alerts
+  namespace: monitoring-demo
+spec:
+  groups:
+    - name: podinfo.rules
+      rules:
+        # application health
+        - alert: PodinfoDown
+          expr: up{job="podinfo", namespace="monitoring-demo"} == 0
+          for: 1m
+          labels: { severity: critical }
+          annotations:
+            summary: "podinfo target {{ $labels.pod }} is down"
+
+        - alert: PodinfoReplicasUnavailable
+          expr: kube_deployment_status_replicas_available{namespace="monitoring-demo", deployment="podinfo"} < kube_deployment_spec_replicas{namespace="monitoring-demo", deployment="podinfo"}
+          for: 2m
+          labels: { severity: warning }
+          annotations:
+            summary: "podinfo has fewer available replicas than desired"
+
+        # errors
+        - alert: PodinfoHighErrorRate
+          expr: |
+            sum by (namespace) (rate(http_requests_total{namespace="monitoring-demo", status=~"5.."}[1m]))
+              / sum by (namespace) (rate(http_requests_total{namespace="monitoring-demo"}[1m])) > 0.05
+          for: 1m
+          labels: { severity: warning }
+          annotations:
+            summary: "podinfo 5xx error rate is {{ $value | humanizePercentage }}"
+
+        # CPU utilization
+        - alert: PodinfoHighCPU
+          expr: sum by (namespace, pod) (rate(container_cpu_usage_seconds_total{namespace="monitoring-demo", container="podinfo"}[2m])) > 0.1
+          for: 1m
+          labels: { severity: warning }
+          annotations:
+            summary: "{{ $labels.pod }} uses {{ $value | printf \"%.2f\" }} CPU cores"
+
+        # memory utilization (vs. the container limit)
+        - alert: PodinfoHighMemory
+          expr: |
+            max by (namespace, pod) (container_memory_working_set_bytes{namespace="monitoring-demo", container="podinfo"})
+              / max by (namespace, pod) (kube_pod_container_resource_limits{namespace="monitoring-demo", container="podinfo", resource="memory"}) > 0.8
+          for: 2m
+          labels: { severity: warning }
+          annotations:
+            summary: "{{ $labels.pod }} memory is above 80% of its limit"

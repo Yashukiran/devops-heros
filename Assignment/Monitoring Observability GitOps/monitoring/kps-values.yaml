@@ -1,0 +1,34 @@
+# kube-prometheus-stack values, slimmed down for a single-node minikube lab
+# helm install kps prometheus-community/kube-prometheus-stack -n monitoring --create-namespace -f kps-values.yaml
+fullnameOverride: kps
+
+prometheus:
+  prometheusSpec:
+    retention: 1d
+    scrapeInterval: 15s
+    evaluationInterval: 15s
+    # pick up ServiceMonitors / PrometheusRules from every namespace, not only ones labelled for this release
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    resources:
+      requests: { cpu: 100m, memory: 400Mi }
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests: { cpu: 10m, memory: 32Mi }
+
+grafana:
+  # no adminPassword here: the chart generates a random one into the kps-grafana secret
+  persistence:
+    enabled: false
+  sidecar:
+    dashboards:
+      searchNamespace: ALL   # load dashboards from ConfigMaps labelled grafana_dashboard=1
+
+# control-plane components are not reachable for scraping on minikube
+kubeEtcd: { enabled: false }
+kubeControllerManager: { enabled: false }
+kubeScheduler: { enabled: false }
+kubeProxy: { enabled: false }
