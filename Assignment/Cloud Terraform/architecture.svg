@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect width="960" height="600" fill="#ffffff"/>
+
+  <!-- Terraform -->
+  <rect x="20" y="230" width="150" height="120" rx="10" fill="#7b42bc"/>
+  <text x="95" y="275" fill="#fff" font-size="18" font-weight="700" text-anchor="middle">Terraform</text>
+  <text x="95" y="298" fill="#e9dcf7" text-anchor="middle">init · plan · apply</text>
+  <text x="95" y="318" fill="#e9dcf7" text-anchor="middle">state · destroy</text>
+  <line x1="170" y1="290" x2="218" y2="290" stroke="#57606a" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Internet -->
+  <rect x="480" y="18" width="160" height="44" rx="22" fill="#f6f8fa" stroke="#57606a"/>
+  <text x="560" y="45" text-anchor="middle" font-weight="600">Internet</text>
+  <line x1="560" y1="62" x2="560" y2="98" stroke="#57606a" stroke-width="2" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+  <text x="572" y="86" fill="#57606a" font-size="12">HTTP :80</text>
+
+  <!-- Region -->
+  <rect x="220" y="100" width="720" height="480" rx="12" fill="#f6f8fa" stroke="#8c959f" stroke-dasharray="6 4"/>
+  <text x="236" y="124" fill="#57606a" font-weight="600">AWS Region ap-south-1 (Mumbai)</text>
+
+  <!-- VPC -->
+  <rect x="250" y="140" width="460" height="420" rx="10" fill="#e7f3ff" stroke="#0969da" stroke-width="2"/>
+  <text x="266" y="164" fill="#0969da" font-weight="700">VPC 10.20.0.0/16</text>
+
+  <!-- IGW -->
+  <rect x="480" y="104" width="160" height="40" rx="6" fill="#ffffff" stroke="#0969da" stroke-width="2"/>
+  <text x="560" y="129" text-anchor="middle" font-weight="600">Internet Gateway</text>
+
+  <!-- Route table -->
+  <rect x="270" y="185" width="190" height="62" rx="6" fill="#ffffff" stroke="#0969da"/>
+  <text x="365" y="208" text-anchor="middle" font-weight="600">Public Route Table</text>
+  <text x="365" y="230" text-anchor="middle" fill="#57606a" font-size="12">0.0.0.0/0 → IGW</text>
+  <line x1="460" y1="216" x2="540" y2="146" stroke="#57606a" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrow)"/>
+
+  <!-- AZ / subnet -->
+  <rect x="270" y="270" width="420" height="270" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
+  <text x="286" y="294" fill="#1a7f37" font-weight="700">Public Subnet 10.20.1.0/24</text>
+  <text x="286" y="313" fill="#57606a" font-size="12">AZ ap-south-1a · map_public_ip_on_launch</text>
+  <line x1="365" y1="247" x2="365" y2="268" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="372" y="263" fill="#57606a" font-size="12">association</text>
+
+  <!-- Security group + EC2 -->
+  <rect x="300" y="330" width="360" height="190" rx="8" fill="#fff8c5" stroke="#9a6700" stroke-width="2" stroke-dasharray="6 3"/>
+  <text x="316" y="353" fill="#9a6700" font-weight="700">Security Group session19-web-sg</text>
+  <text x="316" y="372" fill="#57606a" font-size="12">in: tcp 80 from 0.0.0.0/0 · out: all · no SSH</text>
+  <rect x="340" y="390" width="280" height="110" rx="8" fill="#ffffff" stroke="#bc4c00" stroke-width="2"/>
+  <text x="480" y="418" text-anchor="middle" font-weight="700" fill="#bc4c00">EC2 · t3.micro</text>
+  <text x="480" y="440" text-anchor="middle" fill="#57606a" font-size="12">Amazon Linux 2023 · nginx (user_data)</text>
+  <text x="480" y="460" text-anchor="middle" fill="#57606a" font-size="12">IMDSv2 only · encrypted gp3 root</text>
+  <text x="480" y="480" text-anchor="middle" fill="#57606a" font-size="12">public IP → http://&lt;ip&gt;</text>
+  <line x1="560" y1="144" x2="560" y2="388" stroke="#57606a" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- S3 (regional, outside VPC) -->
+  <rect x="740" y="330" width="180" height="120" rx="8" fill="#ffffff" stroke="#1a7f37" stroke-width="2"/>
+  <text x="830" y="358" text-anchor="middle" font-weight="700" fill="#1a7f37">S3 bucket</text>
+  <text x="830" y="378" text-anchor="middle" fill="#57606a" font-size="12">session19-artifacts-xxxx</text>
+  <text x="830" y="398" text-anchor="middle" fill="#57606a" font-size="12">versioned · SSE-AES256</text>
+  <text x="830" y="418" text-anchor="middle" fill="#57606a" font-size="12">public access blocked</text>
+  <text x="830" y="438" text-anchor="middle" fill="#57606a" font-size="12">deployments/web-server.json</text>
+  <line x1="620" y1="445" x2="738" y2="410" stroke="#57606a" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrow)"/>
+  <text x="830" y="472" text-anchor="middle" fill="#57606a" font-size="12">EC2 details written to S3</text>
+  <text x="830" y="488" text-anchor="middle" fill="#57606a" font-size="12">(implicit dependency)</text>
+</svg>
