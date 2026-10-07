@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Task Tracker – Session 21</title>
+  <style>
+    :root { --bg:#0d1117; --card:#161b22; --line:#30363d; --text:#e6edf3; --muted:#8b949e; --ok:#3fb950; --accent:#2f81f7; --bad:#f85149; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: "Segoe UI", system-ui, sans-serif; background:var(--bg); color:var(--text); }
+    header { padding:20px 32px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; }
+    header h1 { margin:0; font-size:22px; }
+    header p { margin:4px 0 0; color:var(--muted); font-size:13px; }
+    .pill { padding:6px 12px; border-radius:999px; font-size:13px; border:1px solid var(--line); }
+    .pill.ok { color:var(--ok); border-color:var(--ok); } .pill.bad { color:var(--bad); border-color:var(--bad); }
+    main { max-width:960px; margin:28px auto; padding:0 24px; display:grid; grid-template-columns: 2fr 1fr; gap:20px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:20px; }
+    .card h2 { margin:0 0 14px; font-size:16px; }
+    form { display:flex; gap:8px; margin-bottom:14px; }
+    input { flex:1; padding:10px 12px; border-radius:6px; border:1px solid var(--line); background:var(--bg); color:var(--text); }
+    button { padding:10px 16px; border:0; border-radius:6px; background:var(--accent); color:#fff; cursor:pointer; }
+    ul { list-style:none; margin:0; padding:0; }
+    li { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-top:1px solid var(--line); }
+    li.done span { color:var(--muted); text-decoration:line-through; }
+    li button { padding:4px 10px; font-size:12px; background:transparent; border:1px solid var(--line); color:var(--muted); }
+    dl { margin:0; display:grid; grid-template-columns:auto 1fr; gap:8px 12px; font-size:14px; }
+    dt { color:var(--muted); } dd { margin:0; }
+    footer { text-align:center; color:var(--muted); font-size:12px; margin:24px 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>📝 Task Tracker</h1>
+      <p>Session 21 – Final DevOps Project · FastAPI + nginx + Docker + Kubernetes</p>
+    </div>
+    <span id="status" class="pill">checking API…</span>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Tasks</h2>
+      <form id="add">
+        <input id="title" placeholder="Add a task…" maxlength="100" required>
+        <button type="submit">Add</button>
+      </form>
+      <ul id="tasks"></ul>
+    </section>
+
+    <aside class="card">
+      <h2>Backend</h2>
+      <dl>
+        <dt>Service</dt><dd id="svc">–</dd>
+        <dt>Version</dt><dd id="ver">–</dd>
+        <dt>Env</dt><dd id="env">–</dd>
+        <dt>Uptime</dt><dd id="up">–</dd>
+        <dt>Tasks</dt><dd id="count">–</dd>
+      </dl>
+    </aside>
+  </main>
+  <footer>API docs at <code>:8000/docs</code> · metrics at <code>:8000/metrics</code></footer>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    async function refresh() {
+      try {
+        const [info, health, tasks] = await Promise.all(
+          ["/api/info", "/health", "/api/tasks"].map((u) => fetch(u).then((r) => r.json())));
+        $("status").textContent = "API healthy"; $("status").className = "pill ok";
+        $("svc").textContent = info.service; $("ver").textContent = info.version; $("env").textContent = info.environment;
+        $("up").textContent = health.uptime_seconds + " s"; $("count").textContent = health.tasks;
+        $("tasks").innerHTML = "";
+        for (const t of tasks) {
+          const li = document.createElement("li");
+          li.className = t.done ? "done" : "";
+          const span = document.createElement("span");
+          span.textContent = `#${t.id}  ${t.title}`;
+          li.appendChild(span);
+          if (!t.done) {
+            const b = document.createElement("button");
+            b.textContent = "Done";
+            b.onclick = () => fetch(`/api/tasks/${t.id}`, { method: "PATCH" }).then(refresh);
+            li.appendChild(b);
+          }
+          $("tasks").appendChild(li);
+        }
+      } catch (e) {
+        $("status").textContent = "API unreachable"; $("status").className = "pill bad";
+      }
+    }
+
+    $("add").onsubmit = async (e) => {
+      e.preventDefault();
+      await fetch("/api/tasks", { method: "POST", headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ title: $("title").value }) });
+      $("title").value = "";
+      refresh();
+    };
+
+    refresh();
+    setInterval(refresh, 10000);
+  </script>
+</body>
+</html>

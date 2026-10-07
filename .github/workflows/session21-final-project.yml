@@ -1,0 +1,94 @@
+name: Session 21 - Final Project CI/CD
+
+on:
+  push:
+    branches: [Assignment]
+    paths:
+      - "Assignment/Session 21 Final Project/**"
+      - ".github/workflows/session21-final-project.yml"
+  pull_request:
+    paths:
+      - "Assignment/Session 21 Final Project/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PROJECT_DIR: Assignment/Session 21 Final Project
+  API_IMAGE: ghcr.io/yashukiran/session21-task-tracker-api
+  UI_IMAGE: ghcr.io/yashukiran/session21-task-tracker-ui
+
+jobs:
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.PROJECT_DIR }}/app/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -r requirements-dev.txt
+      - run: pytest -v
+
+  security:
+    name: Security Scanning (SAST + dependencies + secrets)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Bandit (SAST)
+        run: |
+          pip install bandit pip-audit
+          bandit -r "$PROJECT_DIR/app/backend" -x "$PROJECT_DIR/app/backend/test_main.py" -ll
+      - name: pip-audit (vulnerable dependencies)
+        run: pip-audit -r "$PROJECT_DIR/app/backend/requirements.txt"
+      - name: Gitleaks (secrets)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  helm-lint:
+    name: Helm lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - run: helm lint "$PROJECT_DIR/helm/task-tracker"
+
+  build:
+    name: Docker Image -> Trivy -> GHCR
+    needs: [test, security, helm-lint]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build images
+        run: |
+          docker build -t "$API_IMAGE:${GITHUB_SHA::7}" "$PROJECT_DIR/app/backend"
+          docker build -t "$UI_IMAGE:${GITHUB_SHA::7}" "$PROJECT_DIR/app/frontend"
+      - name: Trivy scan (fail on fixable CRITICAL)
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+          for img in "$API_IMAGE" "$UI_IMAGE"; do
+            trivy image --quiet --severity HIGH,CRITICAL --ignore-unfixed "$img:${GITHUB_SHA::7}"
+            trivy image --quiet --severity CRITICAL --ignore-unfixed --exit-code 1 "$img:${GITHUB_SHA::7}"
+          done
+      - name: Push to GHCR
+        if: github.event_name == 'push'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          for img in "$API_IMAGE" "$UI_IMAGE"; do
+            docker tag "$img:${GITHUB_SHA::7}" "$img:1.0.0"
+            docker push "$img:${GITHUB_SHA::7}"
+            docker push "$img:1.0.0"
+          done

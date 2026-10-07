@@ -1,0 +1,30 @@
+environment: kubernetes
+
+backend:
+  image:
+    repository: ghcr.io/yashukiran/session21-task-tracker-api
+    tag: "1.0.0"
+  replicas: 2
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { cpu: 250m, memory: 128Mi }
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+frontend:
+  image:
+    repository: ghcr.io/yashukiran/session21-task-tracker-ui
+    tag: "1.0.0"
+  replicas: 2
+  service:
+    type: NodePort
+  resources:
+    requests: { cpu: 20m, memory: 32Mi }
+    limits: { cpu: 100m, memory: 64Mi }
+
+# creates a ServiceMonitor so kube-prometheus-stack scrapes /metrics (needs the Prometheus Operator CRDs)
+serviceMonitor:
+  enabled: false

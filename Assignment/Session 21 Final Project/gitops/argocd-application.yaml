@@ -1,0 +1,26 @@
+# Argo CD deploys the Helm chart straight from Git; a change to values.yaml in Git = a deployment.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: task-tracker
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Yashukiran/devops-heros.git
+    targetRevision: Assignment
+    path: Assignment/Session 21 Final Project/helm/task-tracker
+    helm:
+      valueFiles: [values.yaml]
+      parameters:
+        - name: serviceMonitor.enabled
+          value: "true"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: task-tracker
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
