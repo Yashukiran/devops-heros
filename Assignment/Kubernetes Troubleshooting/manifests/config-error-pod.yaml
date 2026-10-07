@@ -1,0 +1,16 @@
+# CreateContainerConfigError: env var references a Secret that does not exist
+apiVersion: v1
+kind: Pod
+metadata:
+  name: config-error-demo
+spec:
+  containers:
+    - name: app
+      image: busybox:1.36
+      command: ["sh", "-c", "echo DB_PASSWORD is set: ${#DB_PASSWORD} chars; sleep 3600"]
+      env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: password

@@ -1,0 +1,11 @@
+# Pod networking issue: Service sends traffic to port 8080, but nginx listens on 80
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-port-service
+spec:
+  selector:
+    app: web
+  ports:
+    - port: 80
+      targetPort: 8080
