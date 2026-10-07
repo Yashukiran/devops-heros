@@ -87,6 +87,11 @@ Queries run with `promtool` inside the Prometheus pod:
 
 ![metrics](screenshots/04-metrics-cpu-memory-promql.png)
 
+### 4b. Logs + live resource usage (after the load test)
+With the load generator stopped, the last log lines show the app's own **health traffic**: the kubelet (`kube-probe/1.37`) calls `/healthz` (liveness) and `/readyz` (readiness) every few seconds, and **Prometheus** (`Prometheus/3.15.0`) scrapes `/metrics`. `kubectl top` shows the node (7% CPU, 45% memory) and per-pod CPU and memory for the demo app, the GitOps app (3 replicas) and the monitoring stack itself. Prometheus (~475 Mi) and Grafana (~674 Mi) are the biggest consumers.
+
+![logs and top](screenshots/04b-logs-top-nodes-pods.png)
+
 ### 5. Alerts
 My 5 rules are `PodinfoDown`, `PodinfoReplicasUnavailable`, `PodinfoHighErrorRate`, `PodinfoHighCPU` and `PodinfoHighMemory`.
 - **`PodinfoHighErrorRate`** is **firing**: 5xx rate is 10.05%, above the 5% threshold.
